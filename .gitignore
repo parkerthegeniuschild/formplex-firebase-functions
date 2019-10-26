@@ -12,6 +12,7 @@ firebase-debug.log*
 .DS_Store
 firebase*.*
 .firebaserc
+functions/
 
 # Firebase config
 
