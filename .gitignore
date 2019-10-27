@@ -10,9 +10,10 @@ firebase-debug.log*
 .firebase/
 .idea/
 .DS_Store
-firebase*.*
 .firebaserc
 functions/
+
+serviceAccountKey.json
 
 # Firebase config
 
