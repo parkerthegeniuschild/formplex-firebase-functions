@@ -1,5 +1,6 @@
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
+import { config } from 'dotenv';
 
 import * as functions from 'firebase-functions';
 import express from 'express';
@@ -7,7 +8,18 @@ import cors from 'cors';
 import firebase from 'firebase-admin';
 import uuidv5 from 'uuid/v5';
 
-firebase.initializeApp();
+config();
+
+const env = functions.config();
+
+if (env.NODE_ENV === 'development') {
+    firebase.initializeApp({
+        credential: firebase.credential.cert('../serviceAccountKey'),
+        databaseURL: env.DATABASE_URL,
+    });
+} else {
+    firebase.initializeApp();
+}
 
 const app = express();
 
@@ -26,20 +38,21 @@ const database = firebase.database();
 
 // UUID v5 helper function
 const UUIDv5 = (data) => {
-
-    // add user's first_name with current time to create a very unique string
+    /* add user's first_name with current datetime to create a very unique string;
+     the probability of collision is like 0.00000000000000000000000000000000000000000000
+     000000000000000000000 X 10 raised to power minus 1 billion %, hehe :)
+     */
     const string = `${data} ${new Date(Date.now())}`;
+
     return uuidv5(string, uuidv5.DNS);
 };
 
 // helper function to add entry
 const addEntry = (req) => {
     const user = req.body;
-    const { first_name } = req.body;
-    user['_id']  = UUIDv5(first_name);
 
-    return database.ref(`users/${user['_id']}/`).set({
-        ...user
+    return database.ref('users/').push({
+        ...user,
     });
 };
 
@@ -65,3 +78,12 @@ app.get("/", (req, res) => {
 });
 
 exports.users = functions.https.onRequest(app);
+
+exports.addUUID = functions.database.ref('/users/{pushID}')
+    .onCreate((snapshot) => {
+        const originalData = snapshot.val();
+
+        return snapshot.ref.update({
+            _id: UUIDv5(originalData['first_name']),
+        });
+    });
