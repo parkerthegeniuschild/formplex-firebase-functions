@@ -14,27 +14,29 @@ const env = functions.config();
 
 if (env.NODE_ENV === 'development') {
     firebase.initializeApp({
-        credential: firebase.credential.cert('../serviceAccountKey'),
         databaseURL: env.DATABASE_URL,
     });
 } else {
     firebase.initializeApp();
 }
 
+const database = firebase.database();
+
 const app = express();
 
-app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header(
-        "Access-Control-Allow-Headers",
-        "Origin, X-Requested-With, Content-Type, Accept"
-    );
-    next();
-});
+// add cors whitelist
+const whitelist = ['https://formplex.firebaseapp.com'];
+const corsOptionsDelegate = (req, callback) => {
+    let corsOptions;
+    if (whitelist.indexOf(req.header('Origin')) !== -1) {
+        corsOptions = { origin: true }
+    } else {
+        corsOptions = { origin: false }
+    }
+    callback(null, corsOptions)
+};
 
-app.use(cors());
-
-const database = firebase.database();
+app.use(cors(corsOptionsDelegate));
 
 // UUID v5 helper function
 const UUIDv5 = (data) => {
@@ -65,6 +67,12 @@ const readEntries = (req, res) => {
     });
 };
 
+// read all entries
+app.get("/", (req, res) => {
+    readEntries(req, res);
+});
+
+
 // post an entry
 app.post('/', (req, res) => {
     addEntry(req)
@@ -72,14 +80,9 @@ app.post('/', (req, res) => {
         .catch(err => res.status(500).send(err.message));
 });
 
-// read all entries
-app.get("/", (req, res) => {
-    readEntries(req, res);
-});
-
 exports.users = functions.https.onRequest(app);
 
-exports.addUUID = functions.database.ref('/users/{pushID}')
+exports.addUUID = functions.database.ref('/users/{child_ID}')
     .onCreate((snapshot) => {
         const originalData = snapshot.val();
 

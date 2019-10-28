@@ -13,7 +13,7 @@ firebase-debug.log*
 .firebaserc
 functions/
 
-serviceAccountKey.json
+service-account-credentials.json
 
 # Firebase config
 
